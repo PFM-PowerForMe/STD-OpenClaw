@@ -13,7 +13,7 @@ RUN --mount=type=bind,source=source-src/extensions,target=/tmp/extensions \
 FROM docker.io/library/node:lts-trixie-slim AS build
 RUN npm install -g bun && corepack enable
 WORKDIR /app
-COPY source-src/package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY source-src/package.json source-src/pnpm-lock.yaml source-src/pnpm-workspace.yaml source-src/.npmrc ./
 COPY source-src/ui/package.json ./ui/package.json
 COPY source-src/patches ./patches
 COPY --from=ext-deps /out/ ./extensions/
