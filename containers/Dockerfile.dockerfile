@@ -60,9 +60,6 @@ RUN --mount=type=cache,id=openclaw-apt-cache,target=/var/cache/apt,sharing=locke
       gnupg less tmux neovim jq ripgrep fd-find tree unzip tar strace xvfb \
       build-essential make python3 python3-pip python3-venv golang cargo rustc shellcheck \
       ffmpeg
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
-    ln -s /root/.local/bin/uv /usr/local/bin/uv
-RUN pip3 install -U openai-whisper
 RUN chown node:node /app
 COPY --from=runtime-assets --chown=node:node /app/dist ./dist
 COPY --from=runtime-assets --chown=node:node /app/node_modules ./node_modules
