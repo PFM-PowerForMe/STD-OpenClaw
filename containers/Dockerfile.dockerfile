@@ -14,7 +14,7 @@ RUN --mount=type=bind,source=source-src/extensions,target=/tmp/extensions \
 RUN corepack enable
 # Matrix 修复
 WORKDIR /out/matrix
-RUN pnpm add @vector-im/matrix-bot-sdk --save-prod --lockfile-only -w
+RUN pnpm add @vector-im/matrix-bot-sdk --save-prod --lockfile-only
 RUN rm -rf pnpm-lock.yaml
 
 
