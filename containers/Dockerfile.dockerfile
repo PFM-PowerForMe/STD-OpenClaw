@@ -76,12 +76,12 @@ RUN install -d -m 0755 "$COREPACK_HOME" && \
       sleep $((attempt * 2)); \
     done && \
     chmod -R a+rX "$COREPACK_HOME"
+ENV PLAYWRIGHT_BROWSERS_PATH=/var/cache/ms-playwright
 RUN --mount=type=cache,id=openclaw-apt-cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,id=openclaw-apt-lists,target=/var/lib/apt,sharing=locked \
-    mkdir -p /home/node/.cache/ms-playwright && \
-    PLAYWRIGHT_BROWSERS_PATH=/home/node/.cache/ms-playwright \
+    mkdir -p "$PLAYWRIGHT_BROWSERS_PATH" && \
     node /app/node_modules/playwright-core/cli.js install --with-deps chromium && \
-    chown -R node:node /home/node/.cache/ms-playwright
+    chown -R node:node "$PLAYWRIGHT_BROWSERS_PATH"
 
 #RUN pnpm install -g @vector-im/matrix-bot-sdk
 
