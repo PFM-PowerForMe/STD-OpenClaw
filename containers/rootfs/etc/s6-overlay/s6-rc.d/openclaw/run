@@ -3,4 +3,4 @@ with-contenv
 s6-notifyoncheck -d
 s6-setuidgid node
 cd /app
-node openclaw.mjs gateway
+node openclaw.mjs gateway --allow-unconfigured
