@@ -67,11 +67,13 @@ ENV PATH="/command:/pfm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/s
      S6_LOGGING_SCRIPT="n2 s1000000 T" \
      DEBIAN_FRONTEND="noninteractive" \
      PIP_BREAK_SYSTEM_PACKAGES=1 \
-     OPENCLAW_BUNDLED_PLUGINS_DIR="/app/extensions" \
      COREPACK_HOME="/usr/local/share/corepack" \
      NODE_ENV="production" \
      PLAYWRIGHT_BROWSERS_PATH="/var/local/share/ms-playwright" \
-     SHELL="/usr/bin/bash"
+     SHELL="/usr/bin/bash" \
+     LC_ALL="C.UTF-8" \
+     LANG="C.UTF-8" \
+     OPENCLAW_BUNDLED_PLUGINS_DIR="/app/extensions"
 
 RUN --mount=type=cache,id=openclaw-apt-cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,id=openclaw-apt-lists,target=/var/lib/apt,sharing=locked \
