@@ -33,9 +33,9 @@ RUN pnpm canvas:a2ui:bundle || \
      echo "/* A2UI bundle unavailable in this build */" > src/canvas-host/a2ui/a2ui.bundle.js && \
      echo "stub" > src/canvas-host/a2ui/.bundle.hash && \
      rm -rf vendor/a2ui apps/shared/OpenClawKit/Tools/CanvasA2UI)
-RUN npm run build:docker
+RUN pnpm build:docker
 ENV OPENCLAW_PREFER_PNPM=1
-RUN npm run ui:build
+RUN pnpm ui:build
 
 
 FROM build AS runtime-assets
@@ -83,19 +83,19 @@ RUN --mount=type=cache,id=openclaw-apt-cache,target=/var/cache/apt,sharing=locke
     node /app/node_modules/playwright-core/cli.js install --with-deps chromium && \
     chown -R node:node /home/node/.cache/ms-playwright
 
-RUN npm install -g @vector-im/matrix-bot-sdk
+RUN pnpm install -g @vector-im/matrix-bot-sdk
 
 RUN git clone https://github.com/CortexReach/memory-lancedb-pro.git /app/extensions/memory-lancedb-pro && \
     cd /app/extensions/memory-lancedb-pro && \
-    npm install && \
+    pnpm install && \
     chown node:node -R /app/extensions/memory-lancedb-pro
 RUN git clone https://github.com/Martian-Engineering/lossless-claw.git /app/extensions/lossless-claw && \
     cd /app/extensions/lossless-claw && \
-    npm install && \
+    pnpm install && \
     chown node:node -R /app/extensions/lossless-claw
 
 WORKDIR /app
-RUN npm i -g clawhub
+RUN pnpm i -g clawhub
 RUN ln -sf /app/openclaw.mjs /usr/local/bin/openclaw && \
     chmod 755 /app/openclaw.mjs
 USER node
