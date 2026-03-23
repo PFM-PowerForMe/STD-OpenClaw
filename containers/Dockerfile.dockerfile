@@ -48,11 +48,11 @@ ENV OPENCLAW_PREFER_PNPM=1
 RUN pnpm ui:build
 RUN git clone https://github.com/CortexReach/memory-lancedb-pro.git /app/extensions/memory-lancedb-pro && \
     cd /app/extensions/memory-lancedb-pro && \
-    pnpm add && \
+    pnpm install && \
     chown node:node -R /app/extensions/memory-lancedb-pro
 RUN git clone https://github.com/Martian-Engineering/lossless-claw.git /app/extensions/lossless-claw && \
     cd /app/extensions/lossless-claw && \
-    pnpm add && \
+    pnpm install && \
     chown node:node -R /app/extensions/lossless-claw
 
 FROM build AS runtime-assets
