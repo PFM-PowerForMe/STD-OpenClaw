@@ -41,7 +41,7 @@ RUN pnpm canvas:a2ui:bundle || \
 RUN pnpm build:docker
 ENV OPENCLAW_PREFER_PNPM=1
 RUN pnpm ui:build
-RUN pnpm add @vector-im/matrix-bot-sdk @matrix-org/matrix-sdk-crypto-nodejs --prod -w
+RUN pnpm add @vector-im/matrix-bot-sdk @matrix-org/matrix-sdk-crypto-nodejs -w
 RUN git clone https://github.com/CortexReach/memory-lancedb-pro.git /app/extensions/memory-lancedb-pro && \
     cd /app/extensions/memory-lancedb-pro && \
     pnpm install && \
@@ -52,9 +52,9 @@ RUN git clone https://github.com/Martian-Engineering/lossless-claw.git /app/exte
     chown node:node -R /app/extensions/lossless-claw
 
 FROM build AS runtime-assets
-RUN CI=true pnpm prune --prod && \
-    find dist -type f \( -name '*.d.ts' -o -name '*.d.mts' -o -name '*.d.cts' -o -name '*.map' \) -delete
-# RUN find dist -type f \( -name '*.d.ts' -o -name '*.d.mts' -o -name '*.d.cts' -o -name '*.map' \) -delete
+# RUN CI=true pnpm prune --prod && \
+    # find dist -type f \( -name '*.d.ts' -o -name '*.d.mts' -o -name '*.d.cts' -o -name '*.map' \) -delete
+RUN find dist -type f \( -name '*.d.ts' -o -name '*.d.mts' -o -name '*.d.cts' -o -name '*.map' \) -delete
 
 
 FROM docker.io/library/node:lts-trixie-slim
