@@ -82,6 +82,12 @@ RUN --mount=type=cache,id=openclaw-apt-cache,target=/var/cache/apt,sharing=locke
     PLAYWRIGHT_BROWSERS_PATH=/home/node/.cache/ms-playwright \
     node /app/node_modules/playwright-core/cli.js install --with-deps chromium && \
     chown -R node:node /home/node/.cache/ms-playwright
+RUN git clone https://github.com/CortexReach/memory-lancedb-pro.git /app/extensions/memory-lancedb-pro && \
+    cd /app/extensions/memory-lancedb-pro && \
+    pnpm install && \
+    chown node:node -R /app/extensions/memory-lancedb-pro
+WORKDIR /app
+RUN npm i -g clawhub
 RUN ln -sf /app/openclaw.mjs /usr/local/bin/openclaw && \
     chmod 755 /app/openclaw.mjs
 USER node
