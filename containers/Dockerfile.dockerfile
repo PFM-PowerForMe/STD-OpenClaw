@@ -20,7 +20,7 @@ RUN rm -rf pnpm-lock.yaml
 
 FROM docker.io/library/node:lts-trixie-slim AS build
 ENV DEBIAN_FRONTEND="noninteractive"
-RUN apt-get upgrade -y --no-install-recommends && apt-get install -y --no-install-recommends git
+RUN apt-get update && apt-get install -y --no-install-recommends git
 RUN npm install -g bun && corepack enable
 WORKDIR /app
 COPY source-src/package.json source-src/pnpm-lock.yaml source-src/pnpm-workspace.yaml source-src/.npmrc ./
@@ -104,7 +104,8 @@ RUN --mount=type=cache,id=openclaw-apt-cache,target=/var/cache/apt,sharing=locke
     --mount=type=cache,id=openclaw-apt-lists,target=/var/lib/apt,sharing=locked \
     mkdir -p "$PLAYWRIGHT_BROWSERS_PATH" && \
     node /app/node_modules/playwright-core/cli.js install --with-deps chromium && \
-    chown -R node:node "$PLAYWRIGHT_BROWSERS_PATH"
+    chown -R node:node "$PLAYWRIGHT_BROWSERS_PATH" && \
+    rm -rf /var/lib/apt/lists/*
 
 RUN ln -sf /app/openclaw.mjs /usr/local/bin/openclaw && \
     chmod 755 /app/openclaw.mjs
