@@ -33,9 +33,9 @@ RUN pnpm canvas:a2ui:bundle || \
      echo "/* A2UI bundle unavailable in this build */" > src/canvas-host/a2ui/a2ui.bundle.js && \
      echo "stub" > src/canvas-host/a2ui/.bundle.hash && \
      rm -rf vendor/a2ui apps/shared/OpenClawKit/Tools/CanvasA2UI)
-RUN npm build:docker
+RUN npm run build:docker
 ENV OPENCLAW_PREFER_PNPM=1
-RUN npm ui:build
+RUN npm run ui:build
 
 
 FROM build AS runtime-assets
