@@ -108,6 +108,7 @@ RUN ln -sf /app/openclaw.mjs /usr/local/bin/openclaw && \
 RUN chown node:node /app
 COPY --from=s6 / /
 COPY rootfs/ /
+RUN bash /pfm/bin/fix_env
 WORKDIR /home/node
 VOLUME /home/node
 EXPOSE 18789
