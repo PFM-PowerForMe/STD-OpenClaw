@@ -19,6 +19,8 @@ RUN rm -rf pnpm-lock.yaml
 
 
 FROM docker.io/library/node:lts-trixie-slim AS build
+ENV DEBIAN_FRONTEND="noninteractive"
+RUN apt-get upgrade -y --no-install-recommends && apt-get install -y --no-install-recommends git
 RUN npm install -g bun && corepack enable
 WORKDIR /app
 COPY source-src/package.json source-src/pnpm-lock.yaml source-src/pnpm-workspace.yaml source-src/.npmrc ./
