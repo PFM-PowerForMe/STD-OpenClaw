@@ -1,3 +1,6 @@
+FROM ghcr.io/pfm-powerforme/s6:latest AS s6
+
+
 FROM docker.io/library/node:lts-trixie-slim AS ext-deps
 RUN --mount=type=bind,source=source-src/extensions,target=/tmp/extensions \
     mkdir -p /out && \
@@ -10,7 +13,7 @@ RUN --mount=type=bind,source=source-src/extensions,target=/tmp/extensions \
     done
 
 
-FROM docker.io/library/node:lts-trixie-slim AS runtime-assets
+FROM docker.io/library/node:lts-trixie-slim AS build
 RUN npm install -g bun && corepack enable
 WORKDIR /app
 COPY source-src/package.json source-src/pnpm-lock.yaml source-src/pnpm-workspace.yaml source-src/.npmrc ./
@@ -36,31 +39,45 @@ RUN pnpm canvas:a2ui:bundle || \
 RUN pnpm build:docker
 ENV OPENCLAW_PREFER_PNPM=1
 RUN pnpm ui:build
+RUN pnpm add @vector-im/matrix-bot-sdk @matrix-org/matrix-sdk-crypto-nodejs --prod
+RUN git clone https://github.com/CortexReach/memory-lancedb-pro.git /app/extensions/memory-lancedb-pro && \
+    cd /app/extensions/memory-lancedb-pro && \
+    pnpm add && \
+    chown node:node -R /app/extensions/memory-lancedb-pro
+RUN git clone https://github.com/Martian-Engineering/lossless-claw.git /app/extensions/lossless-claw && \
+    cd /app/extensions/lossless-claw && \
+    pnpm add && \
+    chown node:node -R /app/extensions/lossless-claw
 
-
-# FROM build AS runtime-assets
-# RUN CI=true pnpm prune --prod && \
-    # find dist -type f \( -name '*.d.ts' -o -name '*.d.mts' -o -name '*.d.cts' -o -name '*.map' \) -delete
+FROM build AS runtime-assets
+RUN CI=true pnpm prune --prod && \
+    find dist -type f \( -name '*.d.ts' -o -name '*.d.mts' -o -name '*.d.cts' -o -name '*.map' \) -delete
 # RUN find dist -type f \( -name '*.d.ts' -o -name '*.d.mts' -o -name '*.d.cts' -o -name '*.map' \) -delete
 
 
 FROM docker.io/library/node:lts-trixie-slim
-WORKDIR /app
+RUN echo 'APT::Sandbox::User "root";' > /etc/apt/apt.conf.d/99sandbox
+ENV PATH="/command:/pfm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
+     S6_LOGGING_SCRIPT="n2 s1000000 T" \
+     DEBIAN_FRONTEND="noninteractive" \
+     PIP_BREAK_SYSTEM_PACKAGES=1 \
+     OPENCLAW_BUNDLED_PLUGINS_DIR="/app/extensions" \
+     COREPACK_HOME="/usr/local/share/corepack" \
+     NODE_ENV="production" \
+     PLAYWRIGHT_BROWSERS_PATH="/var/local/share/ms-playwright" \
+     SHELL="/usr/bin/bash"
 
-ENV PIP_BREAK_SYSTEM_PACKAGES=1
-ENV OPENCLAW_BUNDLED_PLUGINS_DIR=/app/extensions
-ENV COREPACK_HOME=/usr/local/share/corepack
-ENV NODE_ENV=production
 RUN --mount=type=cache,id=openclaw-apt-cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,id=openclaw-apt-lists,target=/var/lib/apt,sharing=locked \
     apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get upgrade -y --no-install-recommends && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    apt-get upgrade -y --no-install-recommends && \
+    apt-get install -y --no-install-recommends \
       procps hostname curl git lsof openssl wget ca-certificates zsh gh openssh-client \
       gnupg less tmux neovim jq ripgrep fd-find tree unzip tar strace xvfb \
       build-essential make python3 python3-pip python3-venv golang cargo rustc shellcheck \
       ffmpeg
-RUN chown node:node /app
+
+WORKDIR /app
 COPY --from=runtime-assets --chown=node:node /app/dist ./dist
 COPY --from=runtime-assets --chown=node:node /app/node_modules ./node_modules
 COPY --from=runtime-assets --chown=node:node /app/package.json .
@@ -76,30 +93,23 @@ RUN install -d -m 0755 "$COREPACK_HOME" && \
       sleep $((attempt * 2)); \
     done && \
     chmod -R a+rX "$COREPACK_HOME"
-ENV PLAYWRIGHT_BROWSERS_PATH=/var/cache/ms-playwright
+
 RUN --mount=type=cache,id=openclaw-apt-cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,id=openclaw-apt-lists,target=/var/lib/apt,sharing=locked \
     mkdir -p "$PLAYWRIGHT_BROWSERS_PATH" && \
     node /app/node_modules/playwright-core/cli.js install --with-deps chromium && \
     chown -R node:node "$PLAYWRIGHT_BROWSERS_PATH"
 
-#RUN pnpm install -g @vector-im/matrix-bot-sdk
-
-RUN git clone https://github.com/CortexReach/memory-lancedb-pro.git /app/extensions/memory-lancedb-pro && \
-    cd /app/extensions/memory-lancedb-pro && \
-    pnpm install && \
-    chown node:node -R /app/extensions/memory-lancedb-pro
-RUN git clone https://github.com/Martian-Engineering/lossless-claw.git /app/extensions/lossless-claw && \
-    cd /app/extensions/lossless-claw && \
-    pnpm install && \
-    chown node:node -R /app/extensions/lossless-claw
-
-WORKDIR /app
-#RUN pnpm i -g clawhub
 RUN ln -sf /app/openclaw.mjs /usr/local/bin/openclaw && \
     chmod 755 /app/openclaw.mjs
-USER node
 
-HEALTHCHECK --interval=3m --timeout=10s --start-period=15s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:18789/healthz').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
-CMD ["node", "openclaw.mjs", "gateway"]
+
+
+RUN chown node:node /app
+COPY --from=s6 / /
+COPY rootfs/ /
+WORKDIR /home/node
+VOLUME /home/node
+EXPOSE 18789
+
+ENTRYPOINT ["/init"]

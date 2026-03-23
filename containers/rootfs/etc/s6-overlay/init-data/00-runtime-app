@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -e
+
+mkdir -pv \
+        /home/node/.config \
+        /home/node/.cache \
+        /home/node/.local/share \
+        /home/node/.local/state \
+        /home/node/.cache/pip \
+        /home/node/.cache/npm \
+        /home/node/.cache/go-build \
+        /home/node/.cache/go-mod \
+        /home/node/.go \
+        /home/node/.cargo \
+        /home/node/.openclaw
+
+chown node:node -R /home/node

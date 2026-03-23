@@ -1,0 +1,9 @@
+#!/command/with-contenv bash
+
+PID_FILE=$1
+
+if [ -f "$PID_FILE" ]; then
+    exit 0
+else
+    exit 1
+fi
