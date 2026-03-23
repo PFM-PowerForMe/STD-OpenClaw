@@ -10,7 +10,7 @@ RUN --mount=type=bind,source=source-src/extensions,target=/tmp/extensions \
     done
 
 
-FROM docker.io/library/node:lts-trixie-slim AS build
+FROM docker.io/library/node:lts-trixie-slim AS runtime-assets
 RUN npm install -g bun && corepack enable
 WORKDIR /app
 COPY source-src/package.json source-src/pnpm-lock.yaml source-src/pnpm-workspace.yaml source-src/.npmrc ./
@@ -38,10 +38,10 @@ ENV OPENCLAW_PREFER_PNPM=1
 RUN pnpm ui:build
 
 
-FROM build AS runtime-assets
+# FROM build AS runtime-assets
 # RUN CI=true pnpm prune --prod && \
     # find dist -type f \( -name '*.d.ts' -o -name '*.d.mts' -o -name '*.d.cts' -o -name '*.map' \) -delete
-RUN find dist -type f \( -name '*.d.ts' -o -name '*.d.mts' -o -name '*.d.cts' -o -name '*.map' \) -delete
+# RUN find dist -type f \( -name '*.d.ts' -o -name '*.d.mts' -o -name '*.d.cts' -o -name '*.map' \) -delete
 
 
 FROM docker.io/library/node:lts-trixie-slim
@@ -83,7 +83,7 @@ RUN --mount=type=cache,id=openclaw-apt-cache,target=/var/cache/apt,sharing=locke
     node /app/node_modules/playwright-core/cli.js install --with-deps chromium && \
     chown -R node:node /home/node/.cache/ms-playwright
 
-RUN pnpm install -g @vector-im/matrix-bot-sdk
+#RUN pnpm install -g @vector-im/matrix-bot-sdk
 
 RUN git clone https://github.com/CortexReach/memory-lancedb-pro.git /app/extensions/memory-lancedb-pro && \
     cd /app/extensions/memory-lancedb-pro && \
@@ -95,7 +95,7 @@ RUN git clone https://github.com/Martian-Engineering/lossless-claw.git /app/exte
     chown node:node -R /app/extensions/lossless-claw
 
 WORKDIR /app
-RUN pnpm i -g clawhub
+#RUN pnpm i -g clawhub
 RUN ln -sf /app/openclaw.mjs /usr/local/bin/openclaw && \
     chmod 755 /app/openclaw.mjs
 USER node
