@@ -11,6 +11,11 @@ RUN --mount=type=bind,source=source-src/extensions,target=/tmp/extensions \
         cp "$ext_dir/package.json" "/out/$ext/package.json"; \
       fi; \
     done
+RUN corepack enable
+# Matrix 修复
+WORKDIR /out/matrix
+RUN pnpm add @vector-im/matrix-bot-sdk --save-prod --lockfile-only -w
+RUN rm -rf pnpm-lock.yaml
 
 
 FROM docker.io/library/node:lts-trixie-slim AS build
@@ -39,7 +44,6 @@ RUN pnpm canvas:a2ui:bundle || \
 RUN pnpm build:docker
 ENV OPENCLAW_PREFER_PNPM=1
 RUN pnpm ui:build
-RUN pnpm add @vector-im/matrix-bot-sdk @matrix-org/matrix-sdk-crypto-nodejs --prod
 RUN git clone https://github.com/CortexReach/memory-lancedb-pro.git /app/extensions/memory-lancedb-pro && \
     cd /app/extensions/memory-lancedb-pro && \
     pnpm add && \
