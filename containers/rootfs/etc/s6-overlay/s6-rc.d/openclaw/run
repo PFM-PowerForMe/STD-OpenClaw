@@ -18,4 +18,4 @@ export GOMODCACHE /home/node/.cache/go-mod
 export CARGO_HOME /home/node/.cargo
 s6-setuidgid node
 cd /app
-node openclaw.mjs gateway --allow-unconfigured
+node openclaw.mjs gateway --allow-unconfigured --foreground

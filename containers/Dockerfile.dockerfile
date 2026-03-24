@@ -59,7 +59,7 @@ RUN find dist -type f \( -name '*.d.ts' -o -name '*.d.mts' -o -name '*.d.cts' -o
 
 FROM docker.io/library/node:lts-trixie-slim
 RUN echo 'APT::Sandbox::User "root";' > /etc/apt/apt.conf.d/99sandbox
-ENV PATH="/command:/pfm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
+ENV PATH="/command:/pfm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/var/local/share/pnpm" \
      S6_LOGGING_SCRIPT="n2 s1000000 T" \
      DEBIAN_FRONTEND="noninteractive" \
      PIP_BREAK_SYSTEM_PACKAGES=1 \
@@ -69,8 +69,10 @@ ENV PATH="/command:/pfm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/s
      SHELL="/usr/bin/bash" \
      LC_ALL="C.UTF-8" \
      LANG="C.UTF-8" \
-     OPENCLAW_BUNDLED_PLUGINS_DIR="/app/extensions"
+     OPENCLAW_BUNDLED_PLUGINS_DIR="/app/extensions" \
+     PNPM_HOME="/var/local/share/pnpm"
 
+RUN mkdir -pv "$PNPM_HOME"
 RUN --mount=type=cache,id=openclaw-apt-cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,id=openclaw-apt-lists,target=/var/lib/apt,sharing=locked \
     apt-get update && \
@@ -108,7 +110,8 @@ RUN --mount=type=cache,id=openclaw-apt-cache,target=/var/cache/apt,sharing=locke
 RUN ln -sf /app/openclaw.mjs /usr/local/bin/openclaw && \
     chmod 755 /app/openclaw.mjs
 
-
+RUN pnpm install -g clawhub
+RUN curl -sSL https://raw.githubusercontent.com/pimalaya/himalaya/master/install.sh | bash
 
 RUN chown node:node /app
 COPY --from=s6 / /
