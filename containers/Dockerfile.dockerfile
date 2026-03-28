@@ -117,6 +117,7 @@ RUN ln -sf /app/openclaw.mjs /usr/local/bin/openclaw && \
 
 RUN bun install -g clawhub
 RUN bun install -g @tobilu/qmd
+RUN bun install -g sqlite-vec
 RUN curl -sSL https://raw.githubusercontent.com/pimalaya/himalaya/master/install.sh | bash
 
 RUN chown node:node /app
