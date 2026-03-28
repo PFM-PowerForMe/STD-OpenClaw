@@ -65,7 +65,7 @@ ENV PATH="/command:/pfm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/s
      DEBIAN_FRONTEND="noninteractive" \
      PIP_BREAK_SYSTEM_PACKAGES=1 \
      COREPACK_HOME="/usr/local/share/corepack" \
-     BUN_INSTALL_CACHE_DIR="/var/local/share/bun" \
+     BUN_INSTALL="/var/local/share/bun" \
      BUN_INSTALL_BIN="/usr/local/bin" \
      NODE_ENV="production" \
      PLAYWRIGHT_BROWSERS_PATH="/var/local/share/ms-playwright" \
@@ -75,7 +75,7 @@ ENV PATH="/command:/pfm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/s
      OPENCLAW_BUNDLED_PLUGINS_DIR="/app/extensions" \
      PNPM_HOME="/var/local/share/pnpm"
 
-RUN mkdir -pv "$PNPM_HOME"
+RUN mkdir -pv "$PNPM_HOME" "$BUN_INSTALL"
 RUN --mount=type=cache,id=openclaw-apt-cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,id=openclaw-apt-lists,target=/var/lib/apt,sharing=locked \
     apt-get update && \
