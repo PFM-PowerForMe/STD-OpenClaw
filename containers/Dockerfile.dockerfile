@@ -84,7 +84,7 @@ RUN --mount=type=cache,id=openclaw-apt-cache,target=/var/cache/apt,sharing=locke
       procps hostname curl git lsof openssl wget ca-certificates zsh gh openssh-client \
       gnupg less tmux neovim jq ripgrep fd-find tree unzip tar strace xvfb \
       build-essential make python3 python3-pip python3-venv golang cargo rustc shellcheck \
-      ffmpeg chromium sqlite3
+      ffmpeg chromium sqlite3 sshpass
 
 WORKDIR /app
 COPY --from=runtime-assets --chown=node:node /app/dist ./dist
