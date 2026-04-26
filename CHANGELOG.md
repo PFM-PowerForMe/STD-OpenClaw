@@ -122,6 +122,7 @@ Docs: https://docs.openclaw.ai
 ### Fixes
 
 - Auto-reply: poison inbound message dedupe after replay-unsafe provider/runtime failures so retries stay safe before visible progress but cannot duplicate messages after block output, tool side effects, or session progress. Fixes #69303; keeps #58549 and #64606 as duplicate validation. Thanks @martingarramon, @NikolaFC, and @zeroth-blip.
+- Logging/sessions: apply configured redaction patterns to persisted session transcript text and accept escaped character classes in safe custom redaction regexes, so transcript JSONL no longer keeps matching sensitive text in the clear. Fixes #42982. Thanks @panpan0000.
 - Agents/OpenAI: keep Responses web search compatible with minimal thinking by raising `web_search` requests to the lowest supported reasoning effort instead of sending a rejected minimal payload.
 - Agents/tools: honor the `bundle-mcp` allowlist token when deciding whether bundled MCP tools are available, so restricted tool policies can still enable bundled MCP without exposing unrelated tools.
 - Agents/model fallback: jump directly to a known later live-session model redirect instead of walking unrelated fallback candidates, while preserving the already-landed live-session/fallback loop guard. Fixes #57471; related loop family already closed via #58496. Thanks @yuxiaoyang2007-prog.
