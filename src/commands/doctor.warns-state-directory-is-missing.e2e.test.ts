@@ -94,6 +94,9 @@ describe("doctor command", () => {
     const missingDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-missing-state-"));
     fs.rmSync(missingDir, { recursive: true, force: true });
     process.env.OPENCLAW_STATE_DIR = missingDir;
+    doctorCommand = await loadDoctorCommandForTest({
+      unmockModules: ["../flows/doctor-health-contributions.js", "./doctor-state-integrity.js"],
+    });
     await doctorCommand(createDoctorRuntime(), {
       nonInteractive: true,
       workspaceSuggestions: false,
