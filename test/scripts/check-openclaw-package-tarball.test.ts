@@ -12,6 +12,7 @@ function withTarball(
   files: Record<string, string>,
   testBody: (tarball: string) => void,
   version = "0.0.0",
+  includeDefaultUi = true,
 ) {
   const root = mkdtempSync(join(tmpdir(), "openclaw-package-tarball-test-"));
   try {
@@ -22,7 +23,16 @@ function withTarball(
       join(packageRoot, "dist", "postinstall-inventory.json"),
       JSON.stringify(inventory),
     );
-    for (const [relativePath, body] of Object.entries(files)) {
+    const packageFiles = {
+      ...(includeDefaultUi
+        ? {
+            "dist/control-ui/assets/index.js": "console.log('openclaw');\n",
+            "dist/control-ui/index.html": '<!doctype html><div id="root"></div>\n',
+          }
+        : {}),
+      ...files,
+    };
+    for (const [relativePath, body] of Object.entries(packageFiles)) {
       const filePath = join(packageRoot, relativePath);
       mkdirSync(dirname(filePath), { recursive: true });
       writeFileSync(filePath, body);
@@ -157,6 +167,26 @@ describe("check-openclaw-package-tarball", () => {
         expect(result.stdout).toContain("OpenClaw package tarball integrity passed.");
       },
       "2026.4.26",
+    );
+  });
+
+  it("rejects tarballs missing Control UI assets", () => {
+    withTarball(
+      ["dist/index.js"],
+      { "dist/index.js": "export {};\n" },
+      (tarball) => {
+        const result = spawnSync("node", [CHECK_SCRIPT, tarball], { encoding: "utf8" });
+
+        expect(result.status).not.toBe(0);
+        expect(result.stderr).toContain(
+          "missing required package tar entry dist/control-ui/index.html",
+        );
+        expect(result.stderr).toContain(
+          "missing required package tar entries under dist/control-ui/assets/",
+        );
+      },
+      "2026.4.27",
+      false,
     );
   });
 });

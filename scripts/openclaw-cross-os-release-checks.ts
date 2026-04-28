@@ -10,6 +10,8 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
+  readlinkSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -1301,8 +1303,62 @@ export function resolveInstalledPrefixDirFromCliPath(cliPath, platform = process
   return dirname(dirname(resolvedCliPath));
 }
 
-function readInstalledMetadataFromCliPath(cliPath, platform = process.platform) {
-  return readInstalledMetadata(resolveInstalledPrefixDirFromCliPath(cliPath, platform));
+export function resolveInstalledPackageRootFromCliPath(cliPath, platform = process.platform) {
+  const resolvedCliPath =
+    platform === "win32" ? normalizeWindowsInstalledCliPath(cliPath) : String(cliPath ?? "");
+  const packageRoots: string[] = [];
+  const addPackageRoot = (candidate?: string) => {
+    if (candidate && !packageRoots.includes(candidate)) {
+      packageRoots.push(candidate);
+    }
+  };
+
+  addPackageRoot(
+    installedPackageRoot(resolveInstalledPrefixDirFromCliPath(resolvedCliPath, platform)),
+  );
+
+  if (platform !== "win32") {
+    try {
+      const realpath = realpathSync(resolvedCliPath);
+      const marker = "/node_modules/openclaw/";
+      const markerIndex = realpath.indexOf(marker);
+      if (markerIndex >= 0) {
+        addPackageRoot(realpath.slice(0, markerIndex + marker.length - 1));
+      }
+    } catch {}
+
+    try {
+      const linkTarget = readlinkSync(resolvedCliPath);
+      const absoluteTarget = linkTarget.startsWith("/")
+        ? linkTarget
+        : join(dirname(resolvedCliPath), linkTarget);
+      const marker = "/node_modules/openclaw/";
+      const markerIndex = absoluteTarget.indexOf(marker);
+      if (markerIndex >= 0) {
+        addPackageRoot(absoluteTarget.slice(0, markerIndex + marker.length - 1));
+      }
+    } catch {}
+
+    try {
+      const shim = readFileSync(resolvedCliPath, "utf8");
+      const match = /(?<root>\/[^ "'\n\r]+\/node_modules\/openclaw)(?:\/|["'\s]|$)/u.exec(shim);
+      addPackageRoot(match?.groups?.root);
+    } catch {}
+
+    if (resolvedCliPath.endsWith("/.local/bin/openclaw")) {
+      const homeDir = dirname(dirname(dirname(resolvedCliPath)));
+      addPackageRoot(join(homeDir, ".npm-global", "lib", "node_modules", "openclaw"));
+    }
+  }
+
+  const found = packageRoots.find((packageRoot) => existsSync(join(packageRoot, "package.json")));
+  return found ?? packageRoots[0];
+}
+
+export function readInstalledMetadataFromCliPath(cliPath, platform = process.platform) {
+  return readInstalledMetadataFromPackageRoot(
+    resolveInstalledPackageRootFromCliPath(cliPath, platform),
+  );
 }
 
 function resolveInstalledCliInvocation(cliPath, platform = process.platform) {
@@ -2780,7 +2836,10 @@ async function runOpenClaw(params) {
 }
 
 function readInstalledPackageManifest(prefixDir) {
-  const packageRoot = installedPackageRoot(prefixDir);
+  return readInstalledPackageManifestFromPackageRoot(installedPackageRoot(prefixDir));
+}
+
+function readInstalledPackageManifestFromPackageRoot(packageRoot) {
   const packageJsonPath = join(packageRoot, "package.json");
   if (!existsSync(packageJsonPath)) {
     throw new Error(`Installed package manifest missing: ${packageJsonPath}`);
@@ -2797,7 +2856,11 @@ export function readInstalledVersion(prefixDir) {
 }
 
 function readInstalledMetadata(prefixDir) {
-  const { packageJson, packageRoot } = readInstalledPackageManifest(prefixDir);
+  return readInstalledMetadataFromPackageRoot(installedPackageRoot(prefixDir));
+}
+
+function readInstalledMetadataFromPackageRoot(packageRoot) {
+  const { packageJson } = readInstalledPackageManifestFromPackageRoot(packageRoot);
   const buildInfoPath = join(packageRoot, "dist", "build-info.json");
   if (!existsSync(buildInfoPath)) {
     throw new Error(`Installed build info missing: ${buildInfoPath}`);

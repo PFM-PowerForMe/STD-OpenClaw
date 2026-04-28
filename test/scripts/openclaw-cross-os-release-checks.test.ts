@@ -28,10 +28,12 @@ import {
   normalizeWindowsInstalledCliPath,
   parseArgs,
   packageHasScript,
+  readInstalledMetadataFromCliPath,
   readInstalledVersion,
   readRunnerOverrideEnv,
   resolveExplicitBaselineVersion,
   resolveDevUpdateVerificationRef,
+  resolveInstalledPackageRootFromCliPath,
   resolveInstalledPrefixDirFromCliPath,
   resolvePublishedInstallerUrl,
   resolveRequestedSuites,
@@ -396,6 +398,33 @@ describe("scripts/openclaw-cross-os-release-checks", () => {
     expect(
       resolveInstalledPrefixDirFromCliPath("/Users/runner/.npm-global/bin/openclaw", "darwin"),
     ).toBe("/Users/runner/.npm-global");
+  });
+
+  it("resolves npm package metadata behind installer-local POSIX shims", () => {
+    const dir = mkdtempSync(join(tmpdir(), "openclaw-cross-os-installer-shim-"));
+    try {
+      const shimPath = join(dir, ".local", "bin", "openclaw");
+      const packageRoot = join(dir, ".npm-global", "lib", "node_modules", "openclaw");
+      mkdirSync(join(packageRoot, "dist"), { recursive: true });
+      mkdirSync(join(dir, ".local", "bin"), { recursive: true });
+      writeFileSync(
+        join(packageRoot, "package.json"),
+        JSON.stringify({ version: "2026.4.27-beta.1" }),
+      );
+      writeFileSync(
+        join(packageRoot, "dist", "build-info.json"),
+        JSON.stringify({ commit: "abc123" }),
+      );
+      writeFileSync(shimPath, `#!/bin/sh\nexec node "${packageRoot}/dist/entry.js" "$@"\n`);
+
+      expect(resolveInstalledPackageRootFromCliPath(shimPath, "linux")).toBe(packageRoot);
+      expect(readInstalledMetadataFromCliPath(shimPath, "linux")).toEqual({
+        commit: "abc123",
+        version: "2026.4.27-beta.1",
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("detects whether a managed gateway listener is still reachable on loopback", async () => {

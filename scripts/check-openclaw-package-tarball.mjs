@@ -55,6 +55,8 @@ const DIST_IMPORT_REFERENCE_ENTRYPOINTS = [
 const LEGACY_PACKAGE_ACCEPTANCE_COMPAT_MAX = { year: 2026, month: 4, day: 25 };
 const LEGACY_LOCAL_BUILD_METADATA_COMPAT_MAX = { year: 2026, month: 4, day: 26 };
 const FORBIDDEN_LOCAL_BUILD_METADATA_FILES = new Set(LOCAL_BUILD_METADATA_DIST_PATHS);
+const REQUIRED_PACKAGE_ENTRIES = ["dist/control-ui/index.html", "dist/postinstall-inventory.json"];
+const REQUIRED_PACKAGE_PREFIXES = ["dist/control-ui/assets/"];
 
 const LEGACY_OMITTED_PRIVATE_QA_INVENTORY_PREFIXES = [
   "dist/extensions/qa-channel/",
@@ -223,8 +225,15 @@ for (const forbiddenEntry of FORBIDDEN_LOCAL_BUILD_METADATA_FILES) {
     errors.push(`forbidden local build metadata tar entry ${forbiddenEntry}`);
   }
 }
-if (!entrySet.has("dist/postinstall-inventory.json")) {
-  errors.push("missing dist/postinstall-inventory.json");
+for (const requiredEntry of REQUIRED_PACKAGE_ENTRIES) {
+  if (!entrySet.has(requiredEntry)) {
+    errors.push(`missing required package tar entry ${requiredEntry}`);
+  }
+}
+for (const requiredPrefix of REQUIRED_PACKAGE_PREFIXES) {
+  if (!normalized.some((entry) => entry.startsWith(requiredPrefix))) {
+    errors.push(`missing required package tar entries under ${requiredPrefix}`);
+  }
 }
 if (entrySet.has("dist/postinstall-inventory.json")) {
   try {
