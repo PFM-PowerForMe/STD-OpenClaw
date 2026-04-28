@@ -1460,15 +1460,33 @@ EOF
 }
 
 verify_gateway() {
-  local attempt deadline
+  local attempt deadline probe_json
   attempt=1
   deadline=$((SECONDS + TIMEOUT_GATEWAY_S))
   while (( SECONDS < deadline )); do
-    if guest_current_user_exec "$GUEST_OPENCLAW_BIN" gateway status --deep --require-rpc --timeout 30000; then
+    if probe_json="$(
+      guest_current_user_exec "$GUEST_OPENCLAW_BIN" gateway probe \
+        --url ws://127.0.0.1:18789 \
+        --timeout 30000 \
+        --json
+    )"; then
+      printf '%s\n' "$probe_json"
+      if PROBE_JSON="$probe_json" python3 - <<'PY'
+import json
+import os
+
+payload = json.loads(os.environ["PROBE_JSON"])
+raise SystemExit(0 if payload.get("ok") else 1)
+PY
+      then
+        return 0
+      fi
+    elif ! guest_current_user_exec "$GUEST_OPENCLAW_BIN" gateway probe --help >/dev/null 2>&1 &&
+      guest_current_user_exec "$GUEST_OPENCLAW_BIN" gateway status --deep --require-rpc --timeout 30000; then
       return 0
     fi
     if (( SECONDS < deadline )); then
-      printf 'gateway-status retry %s\n' "$attempt" >&2
+      printf 'gateway-probe retry %s\n' "$attempt" >&2
       sleep 5
     fi
     attempt=$((attempt + 1))

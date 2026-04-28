@@ -52,6 +52,8 @@ describe("Parallels smoke model selection", () => {
     const script = readFileSync("scripts/e2e/parallels-macos-smoke.sh", "utf8");
 
     expect(script).toContain("deadline=$((SECONDS + TIMEOUT_GATEWAY_S))");
+    expect(script).toContain("gateway probe");
+    expect(script).toContain("--url ws://127.0.0.1:18789");
     expect(script).toContain("gateway status --deep --require-rpc --timeout 30000");
   });
 
@@ -60,5 +62,13 @@ describe("Parallels smoke model selection", () => {
 
     expect(script).toContain('agent_log="/tmp/openclaw-parallels-agent-turn.log"');
     expect(script).toContain("run_logged_guest_current_user_sh");
+  });
+
+  it("keeps the Windows first agent turn patient enough for cold package startup", () => {
+    const script = readFileSync("scripts/e2e/parallels-windows-smoke.sh", "utf8");
+
+    expect(script).toContain(
+      'TIMEOUT_AGENT_S="${OPENCLAW_PARALLELS_WINDOWS_AGENT_TIMEOUT_S:-1500}"',
+    );
   });
 });
