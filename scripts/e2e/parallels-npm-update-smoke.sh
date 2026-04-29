@@ -1688,33 +1688,6 @@ gateway_log_ready() {
 gateway_smoke_ready() {
   gateway_listener_ready && gateway_log_ready
 }
-scrub_future_plugin_entries() {
-  node - <<'JS' || true
-const fs = require("fs");
-const os = require("os");
-const path = require("path");
-
-const configPath = path.join(os.homedir(), ".openclaw", "openclaw.json");
-if (!fs.existsSync(configPath)) process.exit(0);
-let config;
-try {
-  config = JSON.parse(fs.readFileSync(configPath, "utf8"));
-} catch {
-  process.exit(0);
-}
-const plugins = config?.plugins;
-if (!plugins || typeof plugins !== "object" || Array.isArray(plugins)) process.exit(0);
-const entries = plugins.entries;
-if (entries && typeof entries === "object" && !Array.isArray(entries)) {
-  delete entries.feishu;
-  delete entries.whatsapp;
-}
-if (Array.isArray(plugins.allow)) {
-  plugins.allow = plugins.allow.filter((pluginId) => pluginId !== "feishu" && pluginId !== "whatsapp");
-}
-fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + "\\n");
-JS
-}
 stop_openclaw_gateway_processes() {
   OPENCLAW_DISABLE_BUNDLED_PLUGINS=1 /opt/homebrew/bin/openclaw gateway stop >/dev/null 2>&1 || true
   /usr/bin/pkill -9 -f openclaw-gateway || true
@@ -1751,7 +1724,6 @@ openclaw_version_with_retry() {
 }
 # Stop the pre-update gateway before replacing the package. Otherwise the old
 # host can observe new plugin metadata mid-update and abort config validation.
-scrub_future_plugin_entries
 stop_openclaw_gateway_processes
 # The baseline updater process may run its post-install doctor through the old
 # host while new bundled plugin metadata is already on disk. Keep this
@@ -1836,33 +1808,6 @@ run_linux_update() {
 set -euo pipefail
 export HOME=/root
 cd "\$HOME"
-scrub_future_plugin_entries() {
-  node - <<'JS' || true
-const fs = require("fs");
-const os = require("os");
-const path = require("path");
-
-const configPath = path.join(os.homedir(), ".openclaw", "openclaw.json");
-if (!fs.existsSync(configPath)) process.exit(0);
-let config;
-try {
-  config = JSON.parse(fs.readFileSync(configPath, "utf8"));
-} catch {
-  process.exit(0);
-}
-const plugins = config?.plugins;
-if (!plugins || typeof plugins !== "object" || Array.isArray(plugins)) process.exit(0);
-const entries = plugins.entries;
-if (entries && typeof entries === "object" && !Array.isArray(entries)) {
-  delete entries.feishu;
-  delete entries.whatsapp;
-}
-if (Array.isArray(plugins.allow)) {
-  plugins.allow = plugins.allow.filter((pluginId) => pluginId !== "feishu" && pluginId !== "whatsapp");
-}
-fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + "\\n");
-JS
-}
 stop_openclaw_gateway_processes() {
   OPENCLAW_DISABLE_BUNDLED_PLUGINS=1 openclaw gateway stop >/dev/null 2>&1 || true
   pkill -9 -f openclaw-gateway || true
@@ -1904,7 +1849,6 @@ openclaw_version_with_retry() {
 }
 # Stop the pre-update manual gateway before replacing the package. Otherwise
 # the old host can observe new plugin metadata mid-update and abort validation.
-scrub_future_plugin_entries
 stop_openclaw_gateway_processes
 OPENCLAW_DISABLE_BUNDLED_PLUGINS=1 openclaw update --tag "$update_target" --yes --no-restart --json
 # The fresh Linux lane starts a manual gateway; stop the old process before

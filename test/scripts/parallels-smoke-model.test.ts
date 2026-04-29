@@ -33,23 +33,31 @@ describe("Parallels smoke model selection", () => {
     }
   });
 
-  it("keeps Parallels agent-turn smokes on a provider-only plugin allowlist by default", () => {
+  it("does not rewrite the plugin allowlist during Parallels smokes", () => {
     for (const scriptPath of ["scripts/e2e/parallels-windows-smoke.sh", NPM_UPDATE_SCRIPT_PATH]) {
       const script = readFileSync(scriptPath, "utf8");
 
-      expect(script, scriptPath).toContain("release_smoke_plugin_allowlist_json");
-      expect(script, scriptPath).toContain("plugins.allow");
-      expect(
-        script.includes("config set plugins.allow") || script.includes("config set --batch-file"),
-        scriptPath,
-      ).toBe(true);
-      expect(script, scriptPath).toContain('printf \'["%s"]\' "$PROVIDER"');
-      expect(script, scriptPath).toContain(
+      expect(script, scriptPath).not.toContain("release_smoke_plugin_allowlist_json");
+      expect(script, scriptPath).not.toContain(
         "OPENCLAW_PARALLELS_RELEASE_SMOKE_PLUGIN_ALLOWLIST_JSON",
       );
-      expect(script, scriptPath).not.toContain('"acpx"');
-      expect(script, scriptPath).not.toContain('"device-pair"');
-      expect(script, scriptPath).not.toContain('"memory-core"');
+      expect(script, scriptPath).not.toContain("config set plugins.allow");
+      expect(script, scriptPath).not.toContain("config set --batch-file");
+      expect(script, scriptPath).not.toContain("scrub_future_plugin_entries");
+      expect(script, scriptPath).not.toContain("plugins.allow = plugins.allow.filter");
+    }
+  });
+
+  it("keeps packaged smoke scripts from enabling noisy plugin ids explicitly", () => {
+    for (const scriptPath of ["scripts/e2e/parallels-windows-smoke.sh", NPM_UPDATE_SCRIPT_PATH]) {
+      const script = readFileSync(scriptPath, "utf8");
+
+      expect(
+        script.includes('"acpx"') ||
+          script.includes('"device-pair"') ||
+          script.includes('"memory-core"'),
+        scriptPath,
+      ).toBe(false);
     }
   });
 
@@ -94,13 +102,17 @@ describe("Parallels smoke model selection", () => {
     expect(script).toContain("Set-Item -Path ('Env:' + '${env_name_q}')");
   });
 
-  it("bypasses the Windows command shim for JSON config values", () => {
+  it("keeps Windows smoke config writes on simple strict-json values", () => {
     const script = readFileSync("scripts/e2e/parallels-windows-smoke.sh", "utf8");
     const npmUpdateScript = readFileSync(NPM_UPDATE_SCRIPT_PATH, "utf8");
 
-    expect(script).toContain("guest_set_release_smoke_plugin_allowlist");
-    expect(script).toContain("config set --batch-file \\$batch --strict-json");
-    expect(npmUpdateScript).toContain("config set --batch-file $pluginAllowBatch --strict-json");
+    expect(script).not.toContain("guest_set_release_smoke_plugin_allowlist");
+    expect(script).not.toContain("config set --batch-file");
+    expect(npmUpdateScript).not.toContain("config set --batch-file");
+    expect(script).toContain("config set agents.defaults.skipBootstrap true --strict-json");
+    expect(npmUpdateScript).toContain(
+      "config set agents.defaults.skipBootstrap true --strict-json",
+    );
   });
 
   it("keeps Windows gateway reachability on a real deadline with start recovery", () => {
