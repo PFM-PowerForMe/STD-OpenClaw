@@ -280,14 +280,6 @@ esac
 API_KEY_VALUE="${!API_KEY_ENV:-}"
 [[ -n "$API_KEY_VALUE" ]] || die "$API_KEY_ENV is required"
 
-release_smoke_plugin_allowlist_json() {
-  if [[ -n "${OPENCLAW_PARALLELS_RELEASE_SMOKE_PLUGIN_ALLOWLIST_JSON:-}" ]]; then
-    printf '%s' "$OPENCLAW_PARALLELS_RELEASE_SMOKE_PLUGIN_ALLOWLIST_JSON"
-    return
-  fi
-  printf '["%s"]' "$PROVIDER"
-}
-
 ps_single_quote() {
   printf "%s" "$1" | sed "s/'/''/g"
 }
@@ -614,27 +606,6 @@ if ('${env_name_q}' -ne '') {
 # openclaw.cmd preserves multi-word --message args reliably here; Start-Process
 # against the shim can re-split argv and make Commander reject the turn.
 \$output = & \$openclaw @args 2>&1
-if (\$null -ne \$output) {
-  \$output | ForEach-Object { \$_ }
-}
-exit \$LASTEXITCODE
-EOF
-)"
-}
-
-guest_set_release_smoke_plugin_allowlist() {
-  local allow_json allow_json_q
-  allow_json="$(release_smoke_plugin_allowlist_json)"
-  allow_json_q="$(ps_single_quote "$allow_json")"
-  guest_powershell "$(cat <<EOF
-\$node = Join-Path \$env:ProgramFiles 'nodejs\node.exe'
-if (-not (Test-Path \$node)) {
-  \$node = 'node'
-}
-\$entry = Join-Path \$env:APPDATA 'npm\node_modules\openclaw\openclaw.mjs'
-\$batch = Join-Path \$env:TEMP 'openclaw-release-smoke-plugin-allow.json'
-Set-Content -Path \$batch -Value '[{"path":"plugins.allow","value":${allow_json_q}}]' -Encoding UTF8
-\$output = & \$node \$entry config set --batch-file \$batch --strict-json 2>&1
 if (\$null -ne \$output) {
   \$output | ForEach-Object { \$_ }
 }
@@ -2643,7 +2614,6 @@ show_gateway_status_compat() {
 
 verify_turn() {
   guest_run_openclaw "" "" models set "$MODEL_ID"
-  guest_set_release_smoke_plugin_allowlist
   guest_run_openclaw "" "" config set agents.defaults.skipBootstrap true --strict-json
   guest_powershell "$(cat <<'EOF'
 $workspace = $env:OPENCLAW_WORKSPACE_DIR

@@ -289,10 +289,6 @@ esac
 API_KEY_VALUE="${!API_KEY_ENV:-}"
 [[ -n "$API_KEY_VALUE" ]] || die "$API_KEY_ENV is required"
 
-release_smoke_plugin_allowlist_json() {
-  printf '["%s","acpx","bonjour","browser","device-pair","phone-control","talk-voice"]' "$PROVIDER"
-}
-
 if [[ -n "$DISCORD_TOKEN_ENV" || -n "$DISCORD_GUILD_ID" || -n "$DISCORD_CHANNEL_ID" ]]; then
   [[ -n "$DISCORD_TOKEN_ENV" ]] || die "--discord-token-env is required when Discord smoke args are set"
   [[ -n "$DISCORD_GUILD_ID" ]] || die "--discord-guild-id is required when Discord smoke args are set"
@@ -1528,7 +1524,6 @@ verify_turn() {
   agent_done="/tmp/openclaw-parallels-agent-turn.done"
   agent_runner="/tmp/openclaw-parallels-agent-turn.sh"
   guest_current_user_exec "$GUEST_NODE_BIN" "$GUEST_OPENCLAW_ENTRY" models set "$MODEL_ID"
-  guest_current_user_exec "$GUEST_NODE_BIN" "$GUEST_OPENCLAW_ENTRY" config set plugins.allow "$(release_smoke_plugin_allowlist_json)" --strict-json
   guest_current_user_exec "$GUEST_NODE_BIN" "$GUEST_OPENCLAW_ENTRY" config set agents.defaults.skipBootstrap true --strict-json
   for attempt in 1 2; do
     set +e

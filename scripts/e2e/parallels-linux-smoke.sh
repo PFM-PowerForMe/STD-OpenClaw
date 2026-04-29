@@ -232,10 +232,6 @@ esac
 API_KEY_VALUE="${!API_KEY_ENV:-}"
 [[ -n "$API_KEY_VALUE" ]] || die "$API_KEY_ENV is required"
 
-release_smoke_plugin_allowlist_json() {
-  printf '["%s","acpx","bonjour","browser","device-pair","phone-control","talk-voice"]' "$PROVIDER"
-}
-
 case "${OPENCLAW_PARALLELS_LINUX_DISABLE_BONJOUR:-}" in
   1|true|TRUE|yes|YES|on|ON)
     DISABLE_BONJOUR_FOR_GATEWAY=1
@@ -819,7 +815,6 @@ rm -f "$workspace/BOOTSTRAP.md"'
 
 verify_local_turn() {
   guest_exec openclaw models set "$MODEL_ID"
-  guest_exec openclaw config set plugins.allow "$(release_smoke_plugin_allowlist_json)" --strict-json
   guest_exec openclaw config set agents.defaults.skipBootstrap true --strict-json
   prepare_agent_workspace
   guest_exec /bin/sh -lc "$(cat <<EOF

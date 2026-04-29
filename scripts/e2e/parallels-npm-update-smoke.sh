@@ -237,16 +237,6 @@ esac
 API_KEY_VALUE="${!API_KEY_ENV:-}"
 [[ -n "$API_KEY_VALUE" ]] || die "$API_KEY_ENV is required"
 
-release_smoke_plugin_allowlist_json() {
-  if [[ -n "${OPENCLAW_PARALLELS_RELEASE_SMOKE_PLUGIN_ALLOWLIST_JSON:-}" ]]; then
-    printf '%s' "$OPENCLAW_PARALLELS_RELEASE_SMOKE_PLUGIN_ALLOWLIST_JSON"
-    return
-  fi
-  printf '["%s"]' "$PROVIDER"
-}
-
-RELEASE_SMOKE_PLUGIN_ALLOWLIST_JSON="$(release_smoke_plugin_allowlist_json)"
-
 resolve_python_bin
 
 resolve_linux_vm_name() {
@@ -494,7 +484,6 @@ param(
   [Parameter(Mandatory = $true)][string]$ProviderKeyEnv,
   [Parameter(Mandatory = $false)][string]$ProviderKey,
   [Parameter(Mandatory = $false)][string]$ProviderKeyFile,
-  [Parameter(Mandatory = $true)][string]$PluginAllowlistJsonBase64,
   [Parameter(Mandatory = $true)][string]$LogPath,
   [Parameter(Mandatory = $true)][string]$DonePath
 )
@@ -980,7 +969,6 @@ try {
   if (-not $ProviderKey) {
     throw "$ProviderKeyEnv is required"
   }
-  $PluginAllowlistJson = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($PluginAllowlistJsonBase64))
   Set-Item -Path ('Env:' + $ProviderKeyEnv) -Value $ProviderKey
   $openclaw = Join-Path $env:APPDATA 'npm\openclaw.cmd'
   Remove-FuturePluginEntries
@@ -994,12 +982,6 @@ try {
   Invoke-Logged 'openclaw update status' { & $openclaw update status --json }
   Write-ProgressLog 'update.set-model'
   Invoke-Logged 'openclaw models set' { & $openclaw models set $ModelId }
-  Write-ProgressLog 'update.set-plugin-allowlist'
-  $node = (Get-Command node.exe -ErrorAction Stop).Source
-  $entry = Join-Path $env:APPDATA 'npm\node_modules\openclaw\openclaw.mjs'
-  $pluginAllowBatch = Join-Path $env:TEMP 'openclaw-release-smoke-plugin-allow.json'
-  Set-Content -Path $pluginAllowBatch -Value ('[{"path":"plugins.allow","value":' + $PluginAllowlistJson + '}]') -Encoding UTF8
-  Invoke-Logged 'openclaw config set plugins.allow' { & $node $entry config set --batch-file $pluginAllowBatch --strict-json }
   # Windows can keep the old hashed dist modules alive across in-place global npm upgrades.
   # Restart the gateway/service before verifying status or the next agent turn.
   # Current login-item restarts can report failure before the background service
@@ -1177,7 +1159,6 @@ cat > "\$workspace/.openclaw/workspace-state.json" <<'STATE_EOF'
 STATE_EOF
 rm -f "\$workspace/BOOTSTRAP.md"
   /opt/homebrew/bin/openclaw models set "$MODEL_ID"
-  /opt/homebrew/bin/openclaw config set plugins.allow '$RELEASE_SMOKE_PLUGIN_ALLOWLIST_JSON' --strict-json
   /opt/homebrew/bin/openclaw config set agents.defaults.skipBootstrap true --strict-json
 /opt/homebrew/bin/openclaw agent --agent main --session-id "parallels-npm-update-macos-transport-recovery-$expected_needle" --message "Reply with exact ASCII text OK only." --json
 EOF
@@ -1309,12 +1290,7 @@ if (-not \$gatewayReady) {
 \$providerBytes = [Convert]::FromBase64String('$provider_key_b64')
 \$providerValue = [Text.Encoding]::UTF8.GetString(\$providerBytes)
 Set-Item -Path ('Env:' + '$API_KEY_ENV') -Value \$providerValue
-\$node = (Get-Command node.exe -ErrorAction Stop).Source
-\$entry = Join-Path \$env:APPDATA 'npm\\node_modules\\openclaw\\openclaw.mjs'
-\$pluginAllowBatch = Join-Path \$env:TEMP 'openclaw-release-smoke-plugin-allow.json'
-Set-Content -Path \$pluginAllowBatch -Value '[{"path":"plugins.allow","value":$RELEASE_SMOKE_PLUGIN_ALLOWLIST_JSON}]' -Encoding UTF8
   & \$openclaw models set '$MODEL_ID'
-  & \$node \$entry config set --batch-file \$pluginAllowBatch --strict-json
   & \$openclaw config set agents.defaults.skipBootstrap true --strict-json
 \$workspace = \$env:OPENCLAW_WORKSPACE_DIR
 if (-not \$workspace) {
@@ -1573,14 +1549,6 @@ import os
 print(base64.b64encode(os.environ["PROVIDER_KEY"].encode("utf-8")).decode("ascii"))
 PY
   )"
-  plugin_allow_b64="$(
-    PLUGIN_ALLOWLIST_JSON="$RELEASE_SMOKE_PLUGIN_ALLOWLIST_JSON" "$PYTHON_BIN" - <<'PY'
-import base64
-import os
-
-print(base64.b64encode(os.environ["PLUGIN_ALLOWLIST_JSON"].encode("utf-8")).decode("ascii"))
-PY
-  )"
   start_seconds="$SECONDS"
   poll_deadline=$((SECONDS + TIMEOUT_UPDATE_S + TIMEOUT_UPDATE_POLL_GRACE_S))
   startup_checked=0
@@ -1604,7 +1572,6 @@ Start-Process powershell.exe -ArgumentList @(
   '-ModelId', '$model_id',
   '-ProviderKeyEnv', '$provider_key_env',
   '-ProviderKeyFile', \$providerKeyFile,
-  '-PluginAllowlistJsonBase64', '$plugin_allow_b64',
   '-LogPath', \$log,
   '-DonePath', \$done
 ) -WindowStyle Hidden | Out-Null
@@ -1797,7 +1764,6 @@ stop_openclaw_gateway_processes
 version="\$(openclaw_version_with_retry /opt/homebrew/bin/openclaw "$expected_needle")"
 /opt/homebrew/bin/openclaw update status --json
   /opt/homebrew/bin/openclaw models set "$MODEL_ID"
-  /opt/homebrew/bin/openclaw config set plugins.allow '$RELEASE_SMOKE_PLUGIN_ALLOWLIST_JSON' --strict-json
   /opt/homebrew/bin/openclaw config set agents.defaults.skipBootstrap true --strict-json
 # Same-guest npm upgrades can leave launchd holding the old gateway process or
 # module graph briefly; wait for a fresh RPC-ready restart before the agent turn.
@@ -1947,7 +1913,6 @@ stop_openclaw_gateway_processes
 version="\$(openclaw_version_with_retry openclaw "$expected_needle")"
 openclaw update status --json
 openclaw models set "$MODEL_ID"
-openclaw config set plugins.allow '$RELEASE_SMOKE_PLUGIN_ALLOWLIST_JSON' --strict-json
 openclaw config set agents.defaults.skipBootstrap true --strict-json
 workspace="\${OPENCLAW_WORKSPACE_DIR:-\$HOME/.openclaw/workspace}"
 mkdir -p "\$workspace/.openclaw"
