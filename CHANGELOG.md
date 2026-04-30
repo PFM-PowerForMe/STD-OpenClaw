@@ -43,6 +43,7 @@ Docs: https://docs.openclaw.ai
 ### Fixes
 
 - Auto-reply/group chats: fall back to automatic source delivery when a channel precomputes message-tool-only replies but the `message` tool is unavailable, so Discord/Slack-style group turns do not silently complete without a visible reply. Fixes #74868. Thanks @kagura-agent.
+- Browser/gateway: share one browser control runtime across the HTTP control server and `browser.request`, and refresh browser profile config from the source snapshot, so CLI status/start honors configured `browser.executablePath`, `headless`, and `noSandbox` instead of falling back to stale auto-detection. Fixes #75087; repairs #73617. Thanks @civiltox and @martingarramon.
 - Agents/subagents: bound automatic orphan recovery with persisted recovery attempts and a wedged-session tombstone, and teach task maintenance/doctor to reconcile those sessions so restart loops no longer require manual `sessions.json` surgery. Fixes #74864. Thanks @solosage1.
 - Gateway/startup: skip pre-bind web-fetch provider discovery for credential-free `tools.web.fetch` config, so Docker/Kubernetes gateways bind even when optional fetch limits are present. Fixes #74896. Thanks @KoykL.
 - Slack: require bot-authored room messages with `allowBots=true` to come from an explicitly channel-allowlisted bot or from a room where an explicit Slack owner is present, so broad bot relays cannot run unattended. Fixes #59284. Thanks @andrewhong-translucent.
