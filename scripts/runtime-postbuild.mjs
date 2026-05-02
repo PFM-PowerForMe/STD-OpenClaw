@@ -107,7 +107,8 @@ export function writeStableRootRuntimeAliases(params = {}) {
     return;
   }
 
-  for (const entry of entries) {
+  const candidatesByAlias = new Map();
+  for (const entry of entries.toSorted((left, right) => left.name.localeCompare(right.name))) {
     if (!entry.isFile()) {
       continue;
     }
@@ -115,8 +116,19 @@ export function writeStableRootRuntimeAliases(params = {}) {
     if (!match?.groups?.base) {
       continue;
     }
-    const aliasPath = path.join(distDir, `${match.groups.base}.js`);
-    writeTextFileIfChanged(aliasPath, `export * from "./${entry.name}";\n`);
+    const aliasFileName = `${match.groups.base}.js`;
+    const candidates = candidatesByAlias.get(aliasFileName) ?? [];
+    candidates.push(entry.name);
+    candidatesByAlias.set(aliasFileName, candidates);
+  }
+
+  for (const [aliasFileName, candidates] of candidatesByAlias) {
+    const aliasPath = path.join(distDir, aliasFileName);
+    if (candidates.length !== 1) {
+      fsImpl.rmSync?.(aliasPath, { force: true });
+      continue;
+    }
+    writeTextFileIfChanged(aliasPath, `export * from "./${candidates[0]}";\n`);
   }
 }
 
@@ -131,15 +143,25 @@ export function rewriteRootRuntimeImportsToStableAliases(params = {}) {
     return;
   }
 
-  const runtimeAliasFiles = new Map();
-  for (const entry of entries) {
+  const candidatesByAlias = new Map();
+  for (const entry of entries.toSorted((left, right) => left.name.localeCompare(right.name))) {
     if (!entry.isFile()) {
       continue;
     }
     const match = entry.name.match(ROOT_RUNTIME_ALIAS_PATTERN);
     if (match?.groups?.base) {
-      runtimeAliasFiles.set(entry.name, `${match.groups.base}.js`);
+      const aliasFileName = `${match.groups.base}.js`;
+      const candidates = candidatesByAlias.get(aliasFileName) ?? [];
+      candidates.push(entry.name);
+      candidatesByAlias.set(aliasFileName, candidates);
     }
+  }
+  const runtimeAliasFiles = new Map();
+  for (const [aliasFileName, candidates] of candidatesByAlias) {
+    if (candidates.length !== 1) {
+      continue;
+    }
+    runtimeAliasFiles.set(candidates[0], aliasFileName);
   }
   if (runtimeAliasFiles.size === 0) {
     return;
