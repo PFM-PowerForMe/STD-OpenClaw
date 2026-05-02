@@ -86,7 +86,13 @@ while (Date.now() - startedAt < CONNECT_READY_TIMEOUT_MS) {
     process.exit(0);
   } catch (error) {
     lastError = error;
-    if (!String(error).includes("gateway starting")) {
+    const message = String(error);
+    if (
+      !message.includes("gateway starting") &&
+      !message.includes("ws open timeout") &&
+      !message.includes("ECONNREFUSED") &&
+      !message.includes("ECONNRESET")
+    ) {
       throw error;
     }
     await new Promise((resolve) => setTimeout(resolve, 500));

@@ -26,6 +26,12 @@ const baseUrl = option("--base-url");
 const probePath = option("--path");
 const expectKind = option("--expect");
 const out = option("--out");
+const allowFailing = new Set(
+  option("--allow-failing", "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean),
+);
 const url = new URL(probePath, baseUrl).toString();
 const timeoutMs = Number.parseInt(
   process.env.OPENCLAW_UPGRADE_SURVIVOR_PROBE_TIMEOUT_MS || "60000",
@@ -55,7 +61,14 @@ while (Date.now() - startedAt < timeoutMs) {
       }
     } else if (expectKind === "ready") {
       if (body?.ready !== true) {
-        throw new Error(`${url} did not report ready status: ${text}`);
+        const failing = Array.isArray(body?.failing) ? body.failing : [];
+        const allowed =
+          failing.length > 0 &&
+          allowFailing.size > 0 &&
+          failing.every((entry) => allowFailing.has(String(entry)));
+        if (!allowed) {
+          throw new Error(`${url} did not report ready status: ${text}`);
+        }
       }
     } else {
       throw new Error(`unknown probe expectation: ${expectKind}`);
