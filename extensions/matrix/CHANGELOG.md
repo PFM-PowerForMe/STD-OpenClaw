@@ -1,6 +1,6 @@
 # Changelog
 
-## 2026.5.2-alpha.1
+## 2026.5.2-beta.1
 
 ### Changes
 
