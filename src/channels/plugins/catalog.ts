@@ -3,6 +3,7 @@ import path from "node:path";
 import { MANIFEST_KEY } from "../../compat/legacy-names.js";
 import { resolveOpenClawPackageRootSync } from "../../infra/openclaw-root.js";
 import { listChannelCatalogEntries } from "../../plugins/channel-catalog-registry.js";
+import { resolveChannelAwareNpmSpec } from "../../plugins/channel-npm-spec.js";
 import {
   describePluginInstallSource,
   type PluginInstallSourceInfo,
@@ -239,12 +240,16 @@ function toChannelMeta(params: {
 function resolveInstallInfo(params: {
   install?: PluginPackageInstall;
   packageName?: string;
+  packageVersion?: string;
   packageDir?: string;
   workspaceDir?: string;
 }): ChannelPluginCatalogEntry["install"] | null {
   const clawhubSpec = normalizeOptionalString(params.install?.clawhubSpec);
-  const npmSpec =
-    normalizeOptionalString(params.install?.npmSpec) ?? normalizeOptionalString(params.packageName);
+  const npmSpec = resolveChannelAwareNpmSpec({
+    npmSpec: params.install?.npmSpec,
+    packageName: params.packageName,
+    packageVersion: params.packageVersion,
+  });
   if (!clawhubSpec && !npmSpec) {
     return null;
   }
@@ -295,6 +300,7 @@ function resolveInstallInfo(params: {
 function buildCatalogEntryFromManifest(params: {
   pluginId?: string;
   packageName?: string;
+  packageVersion?: string;
   packageDir?: string;
   origin?: PluginOrigin;
   workspaceDir?: string;
@@ -315,6 +321,7 @@ function buildCatalogEntryFromManifest(params: {
   const install = resolveInstallInfo({
     install: params.install,
     packageName: params.packageName,
+    packageVersion: params.packageVersion,
     packageDir: params.packageDir,
     workspaceDir: params.workspaceDir,
   });
@@ -338,6 +345,7 @@ function buildExternalCatalogEntry(entry: ExternalCatalogEntry): ChannelPluginCa
   const manifest = entry[MANIFEST_KEY];
   return buildCatalogEntryFromManifest({
     packageName: entry.name,
+    packageVersion: entry.version,
     channel: manifest?.channel,
     install: manifest?.install,
   });
@@ -387,6 +395,7 @@ export function listChannelPluginCatalogEntries(
     const entry = buildCatalogEntryFromManifest({
       pluginId: candidate.pluginId,
       packageName: candidate.packageName,
+      packageVersion: candidate.packageVersion,
       packageDir: candidate.rootDir,
       origin: candidate.origin,
       workspaceDir: candidate.workspaceDir ?? options.workspaceDir,

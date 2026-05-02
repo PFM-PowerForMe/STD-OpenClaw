@@ -288,6 +288,39 @@ export function describeChannelPluginCatalogEntriesContract() {
         },
       },
       {
+        name: "pins bare external prerelease package specs to the entry version",
+        setup: () => {
+          const dir = fs.mkdtempSync(
+            path.join(resolvePreferredOpenClawTmpDir(), "openclaw-catalog-prerelease-"),
+          );
+          const catalogPath = path.join(dir, "catalog.json");
+          writeCatalogFile(catalogPath, {
+            ...createCatalogEntry({
+              packageName: "@openclaw/twitch",
+              channelId: "twitch",
+              label: "Twitch",
+              blurb: "Twitch chat integration",
+            }),
+            version: "2026.5.2-beta.2",
+          });
+          return {
+            channelId: "twitch",
+            catalogPaths: [catalogPath],
+            expected: {
+              install: { npmSpec: "@openclaw/twitch@2026.5.2-beta.2" },
+              installSource: {
+                npm: {
+                  spec: "@openclaw/twitch@2026.5.2-beta.2",
+                  packageName: "@openclaw/twitch",
+                  selector: "2026.5.2-beta.2",
+                  selectorKind: "exact-version",
+                },
+              },
+            },
+          };
+        },
+      },
+      {
         name: "accepts external manifest entries with ClawHub-only install metadata",
         setup: () => {
           const dir = fs.mkdtempSync(

@@ -1947,6 +1947,52 @@ describe("syncPluginsForUpdateChannel", () => {
     });
   });
 
+  it("uses the beta dist-tag when beta restores an externalized bundled npm plugin", async () => {
+    resolveBundledPluginSourcesMock.mockReturnValue(new Map());
+    installPluginFromNpmSpecMock.mockResolvedValue(
+      createSuccessfulNpmUpdateResult({
+        pluginId: "legacy-chat",
+        targetDir: "/tmp/openclaw-plugins/legacy-chat",
+        version: "2026.5.2-beta.2",
+        npmResolution: {
+          name: "@openclaw/legacy-chat",
+          version: "2026.5.2-beta.2",
+          resolvedSpec: "@openclaw/legacy-chat@2026.5.2-beta.2",
+        },
+      }),
+    );
+
+    const result = await syncPluginsForUpdateChannel({
+      channel: "beta",
+      externalizedBundledPluginBridges: [
+        {
+          bundledPluginId: "legacy-chat",
+          npmSpec: "@openclaw/legacy-chat",
+          channelIds: ["legacy-chat"],
+        },
+      ],
+      config: {
+        channels: {
+          "legacy-chat": {
+            enabled: true,
+          },
+        },
+      },
+    });
+
+    expect(installPluginFromNpmSpecMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        spec: "@openclaw/legacy-chat@beta",
+        mode: "update",
+        expectedPluginId: "legacy-chat",
+      }),
+    );
+    expect(result.config.plugins?.installs?.["legacy-chat"]?.spec).toBe(
+      "@openclaw/legacy-chat@beta",
+    );
+    expect(result.summary.switchedToNpm).toEqual(["legacy-chat"]);
+  });
+
   it("installs a ClawHub-preferred externalized bundled plugin", async () => {
     resolveBundledPluginSourcesMock.mockReturnValue(new Map());
     installPluginFromClawHubMock.mockResolvedValue(

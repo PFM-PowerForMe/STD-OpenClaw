@@ -13,6 +13,7 @@ import { compareComparableSemver, parseComparableSemver } from "../infra/semver-
 import type { UpdateChannel } from "../infra/update-channels.js";
 import { resolveUserPath } from "../utils.js";
 import { resolveBundledPluginSources } from "./bundled-sources.js";
+import { resolveChannelAwareNpmSpec } from "./channel-npm-spec.js";
 import { buildClawHubPluginInstallRecordFields } from "./clawhub-install-records.js";
 import { CLAWHUB_INSTALL_ERROR_CODE, installPluginFromClawHub } from "./clawhub.js";
 import { normalizePluginsConfig, resolveEffectiveEnableState } from "./config-state.js";
@@ -507,14 +508,28 @@ function resolveClawHubUpdateSpecs(params: {
 function isBridgeAlreadyInstalledFromPreferredSource(params: {
   bridge: ExternalizedBundledPluginBridge;
   record: PluginInstallRecord;
+  channel: UpdateChannel;
 }): boolean {
-  const npmSpec = getExternalizedBundledPluginNpmSpec(params.bridge);
+  const npmSpec = resolveBridgeNpmSpec(params.bridge, params.channel);
   if (npmSpec && params.record.source === "npm" && params.record.spec === npmSpec) {
     return true;
   }
   const clawhubSpec = getExternalizedBundledPluginClawHubSpec(params.bridge);
   return Boolean(
     clawhubSpec && params.record.source === "clawhub" && params.record.spec === clawhubSpec,
+  );
+}
+
+function resolveBridgeNpmSpec(
+  bridge: ExternalizedBundledPluginBridge,
+  channel: UpdateChannel,
+): string {
+  return (
+    resolveChannelAwareNpmSpec({
+      npmSpec: getExternalizedBundledPluginNpmSpec(bridge),
+      packageVersion: bridge.packageVersion,
+      channel,
+    }) ?? ""
   );
 }
 
@@ -1335,6 +1350,7 @@ export async function syncPluginsForUpdateChannel(params: {
         isBridgeAlreadyInstalledFromPreferredSource({
           bridge,
           record: existing.record,
+          channel: params.channel,
         })
       ) {
         if (existing.pluginId !== targetPluginId) {
@@ -1358,7 +1374,7 @@ export async function syncPluginsForUpdateChannel(params: {
       }
 
       const preferredSource = getExternalizedBundledPluginPreferredSource(bridge);
-      const npmSpec = getExternalizedBundledPluginNpmSpec(bridge);
+      const npmSpec = resolveBridgeNpmSpec(bridge, params.channel);
       const clawhubSpec = getExternalizedBundledPluginClawHubSpec(bridge);
       let installSource = preferredSource;
       let installSpec = preferredSource === "clawhub" ? clawhubSpec : npmSpec;
