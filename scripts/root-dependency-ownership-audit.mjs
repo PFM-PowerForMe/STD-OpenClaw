@@ -25,6 +25,10 @@ const ROOT_OWNED_EXTENSION_RUNTIME_DEPENDENCIES = new Map([
     "keep at root; the Bonjour runtime is shipped with packaged startup surfaces even though the bundled plugin also declares it",
   ],
   [
+    "@larksuiteoapi/node-sdk",
+    "keep at root; Feishu runtime chunks are shipped in the OpenClaw package while the Feishu plugin also publishes separately",
+  ],
+  [
     "playwright-core",
     "keep at root; the internal browser runtime is shipped with core even though downloadable browser-adjacent plugins also declare it",
   ],
