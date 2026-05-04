@@ -308,7 +308,19 @@ jobs:
           encoded_name="$(node -e 'console.log(encodeURIComponent(process.env.PACKAGE_NAME ?? ""))')"
           encoded_version="$(node -e 'console.log(encodeURIComponent(process.env.PACKAGE_VERSION ?? ""))')"
           url="${CLAWHUB_REGISTRY%/}/api/v1/packages/${encoded_name}/versions/${encoded_version}"
-          status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' "${url}")"
+          status=""
+          for attempt in $(seq 1 8); do
+            status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' "${url}")"
+            if [[ "${status}" == "404" || "${status}" =~ ^2 ]]; then
+              break
+            fi
+            if [[ "${status}" == "429" || "${status}" =~ ^5 ]]; then
+              echo "ClawHub availability check returned ${status} for ${PACKAGE_NAME}@${PACKAGE_VERSION}; retrying (${attempt}/8)."
+              sleep 60
+              continue
+            fi
+            break
+          done
           if [[ "${status}" =~ ^2 ]]; then
             echo "${PACKAGE_NAME}@${PACKAGE_VERSION} is already published on ClawHub."
             exit 1
