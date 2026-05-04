@@ -40,6 +40,27 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- fix: harden backend message action gateway routing [AI]. (#76374) Thanks @pgondhi987.
+- Gate QQBot streaming command auth [AI]. (#76375) Thanks @pgondhi987.
+- Plugins/release: make the published npm runtime verifier reject blank `openclaw.runtimeExtensions` entries instead of treating them as absent and passing via inferred outputs. Thanks @vincentkoc.
+- Web fetch: scope provider fallback cache entries by the selected fetch provider so config reloads cannot reuse another provider's cached fallback payload. Thanks @vincentkoc.
+- Web search: honor late-bound `tools.web.search.enabled: false` during tool execution so config reloads cannot leave an already-created `web_search` tool runnable. Thanks @vincentkoc.
+- Plugins/packages: reject inferred built runtime entries that exist but fail package-boundary checks instead of falling back to TypeScript source for installed packages. Thanks @vincentkoc.
+- Plugins/loader: do not retry native-loaded JavaScript plugin modules through the source transformer after native evaluation has already reached a missing dependency, avoiding duplicate top-level side effects. Thanks @vincentkoc.
+- Plugins/security: stop the install scanner from blocking official bundled plugin packages when `process.env` access and normal API sends only appear in distant parts of the same compiled bundle.
+- Plugins/packages: reject blank `openclaw.runtimeExtensions` entries instead of silently ignoring them and falling back to inferred TypeScript runtime entries. Thanks @vincentkoc.
+- Doctor/plugins: remove stale managed npm plugin shadow entries from the managed package lock as well as `package.json` and `node_modules`, so future npm operations do not keep referencing repaired bundled-plugin shadows. Thanks @vincentkoc.
+- Plugins/runtime state: keep the key being registered when namespace eviction runs in the same millisecond as existing entries, so `register` and `registerIfAbsent` do not report success while evicting their own fresh value. Thanks @vincentkoc.
+- Control UI/Talk: make failed Talk startup errors dismissable and clear the stale Talk error state when dismissed, so missing realtime voice provider configuration does not leave a permanent chat banner. Fixes #77071. Thanks @ijoshdavis.
+- Control UI/Talk: stop and clear failed realtime Talk sessions when dismissing runtime error banners, so the next Talk click starts a fresh session instead of only stopping the stale one. Thanks @vincentkoc.
+- Control UI/Talk: retry from a failed realtime Talk session on the next Talk click instead of requiring a separate stale-session stop click first. Thanks @vincentkoc.
+- Canvas host: preserve the Gateway TLS scheme in browser canvas host URLs and startup mount logs, so direct HTTPS gateways do not advertise insecure canvas links. Thanks @vincentkoc.
+- WhatsApp/login: route login success and failure messages through the injected runtime, so setup/onboarding surfaces capture all login output instead of only the QR. Thanks @vincentkoc.
+- Google Chat: create an isolated Google auth transport per auth client, so google-auth-library interceptor mutations do not accumulate across webhook verification and access-token clients. Thanks @vincentkoc.
+- Doctor/plugins: remove orphaned or recovered managed npm copies of bundled `@openclaw/*` plugins during `doctor --fix`, so stale package manifests cannot shadow the current bundled plugin config schema.
+- Control UI/performance: cap long-task and long-animation-frame diagnostics in the shared event log, so slow-render telemetry does not evict gateway/plugin events from the Debug and Overview views. Thanks @vincentkoc.
+- Gateway/startup: log the canvas host mount only after the HTTP server has bound, so startup logs no longer report the canvas host as mounted before it can serve requests.
+- Control UI/i18n: render the Sessions active filter tooltip with the configured minute count in every locale and make the i18n check reject placeholder drift. Thanks @BunsDev.
 - Web fetch: late-bind `web_fetch` config and provider fallback metadata from the active runtime snapshot, matching `web_search` so long-lived tools do not use stale fetch provider settings. Thanks @vincentkoc.
 - Plugins/discovery: demote the source-only TypeScript runtime check on already-installed `origin: "global"` plugin packages from a config-blocking error to a warning and let the runtime fall through to the TypeScript source via jiti, so a single broken installed package no longer blocks `plugins install` for unrelated plugins; install-time rejection of newly-installed source-only packages is unchanged. Thanks @romneyda.
 - Providers/OpenAI Codex: stop the OAuth progress spinner before showing the manual redirect paste prompt, so callback timeouts do not spam `Browser callback did not finish` across terminals.
