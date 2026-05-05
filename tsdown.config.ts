@@ -39,10 +39,14 @@ type OutputOptionsReturn = OutputOptionsFactory extends (
 ) => infer Return
   ? Return
   : never;
+type EntryFileNamesFunction = OutputOptionsArg extends { entryFileNames?: infer EntryFileNames }
+  ? Extract<NonNullable<EntryFileNames>, Function>
+  : never;
 type ChunkFileNamesFunction = OutputOptionsArg extends { chunkFileNames?: infer ChunkFileNames }
   ? Extract<NonNullable<ChunkFileNames>, Function>
   : never;
-type ChunkInfo = Parameters<ChunkFileNamesFunction>[0];
+type ChunkFileNameFunction = EntryFileNamesFunction | ChunkFileNamesFunction;
+type ChunkInfo = Parameters<ChunkFileNameFunction>[0];
 type ExternalOptionFunction = (
   id: string,
   parentId: string | undefined,
@@ -144,7 +148,11 @@ function normalizeModuleId(moduleId: string): string {
 
 function resolveExternalizedBundledPluginChunkId(chunkInfo: ChunkInfo): string | null {
   let pluginId: string | null = null;
-  for (const moduleId of chunkInfo.moduleIds ?? []) {
+  const moduleIds = [
+    ...(chunkInfo.facadeModuleId ? [chunkInfo.facadeModuleId] : []),
+    ...(chunkInfo.moduleIds ?? []),
+  ];
+  for (const moduleId of moduleIds) {
     const normalized = normalizeModuleId(moduleId);
     const match = /(?:^|\/)extensions\/([^/]+)\//u.exec(normalized);
     if (!match?.[1]) {
@@ -161,20 +169,43 @@ function resolveExternalizedBundledPluginChunkId(chunkInfo: ChunkInfo): string |
   return pluginId;
 }
 
+function externalizedBundledPluginFileNamePattern(
+  pluginId: string,
+  chunkInfo: ChunkInfo,
+  fallback: string,
+): string {
+  return chunkInfo.name?.startsWith(`extensions/${pluginId}/`)
+    ? fallback
+    : `extensions/${pluginId}/${fallback}`;
+}
+
 function buildOutputOptions(options: OutputOptionsArg): OutputOptionsReturn {
+  const previousEntryFileNames = options.entryFileNames;
   const previousChunkFileNames = options.chunkFileNames;
 
   return {
     ...options,
-    chunkFileNames(chunkInfo: ChunkInfo) {
+    entryFileNames(chunkInfo: ChunkInfo) {
+      const fallback =
+        typeof previousEntryFileNames === "function"
+          ? previousEntryFileNames(chunkInfo)
+          : (previousEntryFileNames ?? "[name].js");
       const externalizedPluginId = resolveExternalizedBundledPluginChunkId(chunkInfo);
       if (externalizedPluginId) {
-        return `extensions/${externalizedPluginId}/[name]-[hash].js`;
+        return externalizedBundledPluginFileNamePattern(externalizedPluginId, chunkInfo, fallback);
       }
-      if (typeof previousChunkFileNames === "function") {
-        return previousChunkFileNames(chunkInfo);
+      return fallback;
+    },
+    chunkFileNames(chunkInfo: ChunkInfo) {
+      const fallback =
+        typeof previousChunkFileNames === "function"
+          ? previousChunkFileNames(chunkInfo)
+          : (previousChunkFileNames ?? "[name]-[hash].js");
+      const externalizedPluginId = resolveExternalizedBundledPluginChunkId(chunkInfo);
+      if (externalizedPluginId) {
+        return externalizedBundledPluginFileNamePattern(externalizedPluginId, chunkInfo, fallback);
       }
-      return previousChunkFileNames ?? "[name]-[hash].js";
+      return fallback;
     },
   };
 }
