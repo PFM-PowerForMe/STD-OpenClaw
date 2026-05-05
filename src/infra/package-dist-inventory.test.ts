@@ -258,61 +258,6 @@ describe("package dist inventory", () => {
     });
   });
 
-  it("keeps root chunks sourced from externalized bundled plugins out of the inventory", async () => {
-    await withTempDir(
-      { prefix: "openclaw-dist-inventory-externalized-root-chunk-" },
-      async (packageRoot) => {
-        const rootPackageJson = path.join(packageRoot, "package.json");
-        const externalizedRuntime = path.join(
-          packageRoot,
-          "dist",
-          "extensions",
-          "feishu",
-          "index.js",
-        );
-        const externalizedRootChunk = path.join(packageRoot, "dist", "client-aXm07fcz.js");
-        const bundledRootChunk = path.join(packageRoot, "dist", "slack-runtime-CcqRgDZU.js");
-        const coreRootChunk = path.join(packageRoot, "dist", "entry.js");
-
-        await fs.mkdir(path.dirname(externalizedRuntime), { recursive: true });
-        await fs.writeFile(
-          rootPackageJson,
-          JSON.stringify({
-            files: ["dist/", "!dist/extensions/feishu/**"],
-          }),
-          "utf8",
-        );
-        await fs.writeFile(externalizedRuntime, "export {};\n", "utf8");
-        await fs.writeFile(
-          externalizedRootChunk,
-          [
-            'import * as Lark from "@larksuiteoapi/node-sdk";',
-            "//#region extensions/feishu/src/client.ts",
-            "export { Lark };",
-            "",
-          ].join("\n"),
-          "utf8",
-        );
-        await fs.writeFile(
-          bundledRootChunk,
-          [
-            'import WebSocket from "ws";',
-            "//#region extensions/slack/src/runtime.ts",
-            "export { WebSocket };",
-            "",
-          ].join("\n"),
-          "utf8",
-        );
-        await fs.writeFile(coreRootChunk, "export {};\n", "utf8");
-
-        await expect(writePackageDistInventory(packageRoot)).resolves.toEqual([
-          "dist/entry.js",
-          "dist/slack-runtime-CcqRgDZU.js",
-        ]);
-      },
-    );
-  });
-
   it("keeps publishable core-package runtime plugin dist trees in the inventory", async () => {
     await withTempDir({ prefix: "openclaw-dist-inventory-core-runtime-" }, async (packageRoot) => {
       const coreRuntime = path.join(packageRoot, "dist", "extensions", "core-chat", "index.js");

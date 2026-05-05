@@ -9,6 +9,7 @@ type TsdownConfigEntry = {
   };
   entry?: Record<string, string> | string[];
   inputOptions?: TsdownInputOptions;
+  outputOptions?: TsdownOutputOptions;
   outDir?: string;
 };
 
@@ -38,6 +39,18 @@ type TsdownExternalFunction = (
   parentId: string | undefined,
   isResolved: boolean,
 ) => boolean | null | undefined;
+
+type TsdownOutputOptions = (
+  options: {
+    chunkFileNames?: string | ((chunkInfo: { moduleIds: string[] }) => string);
+  },
+  format?: unknown,
+  context?: unknown,
+) =>
+  | {
+      chunkFileNames?: string | ((chunkInfo: { moduleIds: string[] }) => string);
+    }
+  | undefined;
 
 function asConfigArray(config: unknown): TsdownConfigEntry[] {
   return Array.isArray(config) ? (config as TsdownConfigEntry[]) : [config as TsdownConfigEntry];
@@ -176,6 +189,38 @@ describe("tsdown config", () => {
     expect(typeof external).toBe("function");
     const externalize = external as TsdownExternalFunction;
     expect(externalize("qrcode-terminal/lib/main.js", undefined, false)).toBe(true);
+  });
+
+  it("routes externalized bundled plugin chunks under their excluded dist subtree", () => {
+    const configured = unifiedDistGraph()?.outputOptions?.({
+      chunkFileNames: "[name]-[hash].js",
+    });
+    const chunkFileNames = configured?.chunkFileNames;
+
+    expect(typeof chunkFileNames).toBe("function");
+    expect(
+      (chunkFileNames as (chunkInfo: { moduleIds: string[] }) => string)({
+        moduleIds: ["/repo/extensions/feishu/src/client.ts"],
+      }),
+    ).toBe("extensions/feishu/[name]-[hash].js");
+    expect(
+      (chunkFileNames as (chunkInfo: { moduleIds: string[] }) => string)({
+        moduleIds: ["/repo/extensions/telegram/src/api.ts"],
+      }),
+    ).toBe("[name]-[hash].js");
+    expect(
+      (chunkFileNames as (chunkInfo: { moduleIds: string[] }) => string)({
+        moduleIds: ["/repo/extensions/feishu/src/client.ts", "/repo/src/shared/string.ts"],
+      }),
+    ).toBe("extensions/feishu/[name]-[hash].js");
+    expect(
+      (chunkFileNames as (chunkInfo: { moduleIds: string[] }) => string)({
+        moduleIds: [
+          "/repo/extensions/feishu/src/client.ts",
+          "/repo/extensions/telegram/src/api.ts",
+        ],
+      }),
+    ).toBe("[name]-[hash].js");
   });
 
   it("suppresses unresolved imports from extension source", () => {

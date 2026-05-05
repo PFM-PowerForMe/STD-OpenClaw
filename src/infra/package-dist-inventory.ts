@@ -40,7 +40,6 @@ const OMITTED_DIST_SUBTREE_PATTERNS = [
 ] as const;
 const INSTALL_STAGE_DEBRIS_DIR_PATTERN = /^\.openclaw-install-stage(?:-[^/]+)?$/iu;
 type ExternalizedBundledExtensionIds = ReadonlySet<string>;
-const ROOT_DIST_JAVASCRIPT_FILE_RE = /^dist\/[^/]+\.(?:c|m)?js$/u;
 
 function normalizeRelativePath(value: string): string {
   return value.replace(/\\/g, "/");
@@ -114,21 +113,6 @@ function isExternalizedBundledExtensionDistPath(
   );
 }
 
-async function isExternalizedBundledExtensionRootChunk(
-  absolutePath: string,
-  relativePath: string,
-  externalizedExtensionIds: ExternalizedBundledExtensionIds,
-): Promise<boolean> {
-  if (externalizedExtensionIds.size === 0 || !ROOT_DIST_JAVASCRIPT_FILE_RE.test(relativePath)) {
-    return false;
-  }
-
-  const source = await fs.readFile(absolutePath, "utf8");
-  return [...externalizedExtensionIds].some((pluginId) =>
-    source.includes(`//#region extensions/${pluginId}/`),
-  );
-}
-
 async function collectExternalizedBundledExtensionIds(
   packageRoot: string,
 ): Promise<ExternalizedBundledExtensionIds> {
@@ -144,11 +128,10 @@ async function collectExternalizedBundledExtensionIds(
   }
 }
 
-async function isPackagedDistPath(
-  absolutePath: string,
+function isPackagedDistPath(
   relativePath: string,
   externalizedExtensionIds: ExternalizedBundledExtensionIds,
-): Promise<boolean> {
+): boolean {
   if (!relativePath.startsWith("dist/")) {
     return false;
   }
@@ -178,15 +161,6 @@ async function isPackagedDistPath(
     return false;
   }
   if (OMITTED_QA_EXTENSION_PREFIXES.some((prefix) => relativePath.startsWith(prefix))) {
-    return false;
-  }
-  if (
-    await isExternalizedBundledExtensionRootChunk(
-      absolutePath,
-      relativePath,
-      externalizedExtensionIds,
-    )
-  ) {
     return false;
   }
   return true;
@@ -231,9 +205,7 @@ async function collectRelativeFiles(
           return await collectRelativeFiles(entryPath, baseDir, externalizedExtensionIds);
         }
         if (entry.isFile()) {
-          return (await isPackagedDistPath(entryPath, relativePath, externalizedExtensionIds))
-            ? [relativePath]
-            : [];
+          return isPackagedDistPath(relativePath, externalizedExtensionIds) ? [relativePath] : [];
         }
         return [];
       }),
